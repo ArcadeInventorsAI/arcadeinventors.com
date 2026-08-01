@@ -1,0 +1,331 @@
+<title>DreamDrop — DreamAuthentics</title>
+<style>
+  :root{ --wood1:#6b4423; --wood2:#4a2e17; --wood-edge:#8a5a30; --brand:#e9c07a;
+         --ink:#e8e8ea; --muted:#9aa; --accent:#39d0ff; --ok:#2bb673; --warn:#ff5555;
+         --panel:#1c2440; --panel-line:#35507f; }
+  *{box-sizing:border-box}
+  body{background:#08080c;color:var(--ink);font-family:system-ui,-apple-system,sans-serif;
+       text-align:center;margin:0;padding:18px;min-height:100vh}
+  h1{font-weight:650;margin:6px;letter-spacing:.5px}
+  h1 span{color:var(--accent)}
+  .sub{color:var(--muted);margin:0 0 14px;font-size:14px}
+  .tv{display:inline-block;background:linear-gradient(var(--wood1),var(--wood2));border-radius:26px;
+      padding:26px 30px 46px;box-shadow:0 14px 50px #000, inset 0 2px 6px var(--wood-edge);position:relative}
+  .brand{position:absolute;top:8px;left:0;right:0;color:var(--brand);font-size:11px;letter-spacing:3px}
+  .screen{background:#000;border-radius:14px;padding:12px;border:6px solid #1a1a1a;box-shadow:inset 0 0 30px #000}
+  canvas{display:block;width:640px;height:480px;max-width:88vw;aspect-ratio:4/3;
+         image-rendering:pixelated;border-radius:8px;background:#000;cursor:crosshair}
+  .knobs{margin-top:14px}
+  .knob{display:inline-block;width:26px;height:26px;border-radius:50%;
+        background:radial-gradient(#444,#111);margin:0 10px;border:2px solid #7a5a30}
+  .controls{margin:16px auto;max-width:680px}
+  .controls>div{margin-bottom:8px}
+  button{background:var(--panel);color:#dfe8ff;border:1px solid var(--panel-line);border-radius:8px;
+         padding:8px 14px;margin:4px;font-size:14px;cursor:pointer;transition:background .12s}
+  button:hover{background:#26315c}
+  button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  button.on{background:var(--ok);color:#03150c;border-color:var(--ok)}
+  #mode-orig{border-color:var(--warn)}
+  .note{color:#889;font-size:13px;max-width:640px;margin:12px auto;line-height:1.55}
+  .note a{color:#6cf}
+  @media (prefers-reduced-motion: reduce){ *{transition:none!important} }
+</style>
+
+<h1>DreamDrop <span>— DreamAuthentics</span></h1>
+<p class="sub">Our first game. 100% our code. Dial-catch mechanic. Fully skinnable. Play with your mouse.</p>
+
+<div class="tv"><div class="brand">D R E A M A U T H E N T I C S</div>
+  <div class="screen"><canvas id="game" width="640" height="480"></canvas></div>
+  <div class="knobs"><span class="knob"></span><span class="knob"></span></div>
+</div>
+
+<div class="controls">
+  <div>
+    <strong style="color:#ffb3b3">MODE:</strong>
+    <button id="mode-orig" onclick="pickMode('original',this)">⛔ ORIGINAL (internal)</button>
+    <button id="mode-skin" onclick="pickMode('skinned',this)" class="on">✨ SKINNED (ours)</button>
+    <span id="mode-tag" style="color:#889;font-size:13px;margin-left:8px"></span>
+  </div>
+  <div id="skinrow">
+    <strong style="color:#9aa">SKIN:</strong>
+    <button onclick="pick('neon',this)" id="sk-neon">Neon Drop</button>
+    <button onclick="pick('vital',this)" id="sk-vital">Vital Health 💊</button>
+    <button onclick="pick('arcade',this)" id="sk-arcade">Retro Arcade</button>
+  </div>
+  <div><button id="spin" onclick="spin(this)">🎛 Spinner mode (dial/paddle)</button></div>
+</div>
+
+<p class="note"><b>Same game, every skin.</b> Toggle a skin and watch every element change while it plays
+identically — the bomb becomes a vitamin, the catcher becomes a cup, gameplay untouched. That's the
+"layers" model. <b>Spinner mode</b> locks the pointer so the mouse behaves like a rotary dial — exactly
+how the <a href="https://www.tornadospinner.com">Tornado Spinner</a> will drive it. Press <b>Esc</b> to exit.</p>
+
+<script>
+/* DreamAuthentics — skin layers for the dial-catch game.
+   A skin is pure DATA: it swaps every visible/audible element without touching
+   the mechanic. This is the "Photoshop layers" model — the game code below reads
+   these fields and never hard-codes a look. Add a skin = add an object here.
+   NOTE: all art is original (canvas-drawn shapes + emoji). No ripped assets,
+   no reproduction of any original game's characters or trade dress. */
+window.SKINS = {
+  // ⛔ INTERNAL ONLY — the faithful "original-feel" reference look for calibration.
+  // Generic shapes/emoji, NOT the original game's copyrighted sprites/trade dress.
+  // NEVER ships; watermarked in-game. See docs/LEGAL-FRAMEWORK.md hard gate.
+  original: {
+    name: "ORIGINAL (reference)", internal: true,
+    bg: ["#000000", "#101010"],
+    dropper: { fill: "#e0b0ff", label: "☺", kind: "emoji-dropper", emoji: "🧨" },
+    object:  { fill: "#ff3030", glow: "#ff8080", label: "●", kind: "emoji", emoji: "💣" },
+    catcher: { fill: "#d0d0d0", kind: "cup", emoji: "🪣" },
+    hud:     { color: "#ffffff", accent: "#ff5555" },
+    words:   { object: "bomb", catcher: "bucket", dropper: "dropper" },
+    sfx:     { catch: 700, miss: 100 }
+  },
+  neon: {
+    name: "Neon Drop",
+    bg: ["#0b0f2a", "#1a1040"],          // gradient top->bottom
+    dropper: { fill: "#39d0ff", label: "▼", kind: "orb-dropper" },
+    object:  { fill: "#ff4d88", glow: "#ff9ec4", label: "●", kind: "orb" },
+    catcher: { fill: "#39ffa8", kind: "paddle" },
+    hud:     { color: "#eaf6ff", accent: "#39d0ff" },
+    words:   { object: "orb", catcher: "paddle", dropper: "emitter" },
+    sfx:     { catch: 660, miss: 120 }   // beep frequencies (Web Audio)
+  },
+  vital: {
+    name: "Vital Health",                // ties to vitalhealth.arcadeinventors.com
+    bg: ["#eafff4", "#bfefd8"],
+    dropper: { fill: "#ff8a3d", label: "💊", kind: "emoji-dropper", emoji: "🧑‍⚕️" },
+    object:  { fill: "#ff5a5a", glow: "#ffd0a0", label: "💊", kind: "emoji", emoji: "💊" },
+    catcher: { fill: "#2bb673", kind: "cup", emoji: "🥤" },
+    hud:     { color: "#0c3b26", accent: "#2bb673" },
+    words:   { object: "vitamin", catcher: "cup", dropper: "pharmacist" },
+    sfx:     { catch: 780, miss: 140 }
+  },
+  arcade: {
+    name: "Retro Arcade",
+    bg: ["#101010", "#241014"],
+    dropper: { fill: "#ffd93d", label: "◆", kind: "orb-dropper" },
+    object:  { fill: "#ffd93d", glow: "#fff2a8", label: "◆", kind: "orb" },
+    catcher: { fill: "#ff5252", kind: "paddle" },
+    hud:     { color: "#ffe9a8", accent: "#ffd93d" },
+    words:   { object: "gem", catcher: "catcher", dropper: "dropper" },
+    sfx:     { catch: 880, miss: 110 }
+  }
+};
+
+/* DreamAuthentics — Dial-Catch engine (original code, clean-room).
+   Mechanic (free to implement): a dropper at the top releases objects that fall
+   in a column; the player slides a stack of catchers along the bottom with a dial
+   (mouse X / paddle / spinner); catch = points, a miss costs a catcher and clears
+   the wave; speed and count escalate each wave. Informed by Behavior Spec #001
+   (dial-catch class). No original game's code or assets are used.
+
+   Tunables below are OURS — a faithful *feel* target, not copied data. */
+const CFG = {
+  waves: 8,                 // difficulty groups
+  objectsPerWave: w => 8 + w * 2,      // more objects each wave
+  fallSpeed:  w => 90 + w * 42,        // px/sec, escalates per wave
+  dropGap:    w => Math.max(0.28, 0.85 - w * 0.07), // seconds between drops
+  catchers: 3,              // "lives" — a stack you can lose
+  pointsPerCatch: w => (w + 1),        // later waves worth more
+  W: 640, H: 480
+};
+
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+function _ls(k){try{return localStorage.getItem(k)}catch(e){return null}}
+let skin = window.SKINS[_ls("da_skin") || "neon"];
+
+let state, audioCtx;
+function beep(freq, ms = 60){
+  try{
+    audioCtx = audioCtx || new (window.AudioContext||window.webkitAudioContext)();
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.frequency.value = freq; o.type = "square";
+    o.connect(g); g.connect(audioCtx.destination);
+    g.gain.value = 0.05; o.start();
+    o.stop(audioCtx.currentTime + ms/1000);
+  }catch(e){}
+}
+
+function newGame(){
+  state = {
+    mode: "start", wave: 0, score: 0, catchers: CFG.catchers,
+    dialX: CFG.W/2, objects: [], toDrop: 0, dropTimer: 0,
+    dropperX: CFG.W/2, dropperDir: 1, dropperSpeed: 150, last: performance.now()
+  };
+}
+function startWave(w){
+  state.wave = w;
+  state.toDrop = CFG.objectsPerWave(w);
+  state.dropTimer = 0;
+  state.objects = [];
+  state.dropperSpeed = 150 + w*35;
+  state.mode = "play";
+}
+
+// ---- input: dial. mouse X, touch, and Pointer-Lock relative (spinner-like) ----
+let lockedDial = false;
+canvas.addEventListener("mousemove", e => {
+  if(lockedDial && document.pointerLockElement === canvas){
+    state.dialX += e.movementX;          // relative — behaves like a paddle/spinner
+  } else {
+    const r = canvas.getBoundingClientRect();
+    state.dialX = (e.clientX - r.left) * (CFG.W / r.width);
+  }
+});
+canvas.addEventListener("touchmove", e => {
+  const r = canvas.getBoundingClientRect();
+  state.dialX = (e.touches[0].clientX - r.left) * (CFG.W / r.width);
+  e.preventDefault();
+}, {passive:false});
+canvas.addEventListener("click", () => {
+  if(state.mode === "start" || state.mode === "over"){ startWave(0); }
+  else if(!lockedDial){ /* click to enable spinner-mode via button instead */ }
+});
+
+function update(dt){
+  if(state.mode !== "play") return;
+  // dropper sweeps back and forth
+  state.dropperX += state.dropperDir * state.dropperSpeed * dt;
+  if(state.dropperX < 24){ state.dropperX = 24; state.dropperDir = 1; }
+  if(state.dropperX > CFG.W-24){ state.dropperX = CFG.W-24; state.dropperDir = -1; }
+  // release objects
+  if(state.toDrop > 0){
+    state.dropTimer -= dt;
+    if(state.dropTimer <= 0){
+      state.objects.push({ x: state.dropperX, y: 60, v: CFG.fallSpeed(state.wave), done: null });
+      state.toDrop--;
+      state.dropTimer = CFG.dropGap(state.wave);
+    }
+  }
+  // clamp dial
+  state.dialX = Math.max(40, Math.min(CFG.W-40, state.dialX));
+  const catchY = CFG.H - 40;
+  let missed = false;
+  for(const o of state.objects){
+    if(o.done) continue;
+    o.y += o.v * dt;
+    if(o.y >= catchY-12 && o.y <= catchY+16 && Math.abs(o.x - state.dialX) < 48){
+      o.done = "caught"; state.score += CFG.pointsPerCatch(state.wave); beep(skin.sfx.catch);
+    } else if(o.y > CFG.H){
+      o.done = "missed"; missed = true;
+    }
+  }
+  // remove caught objects
+  state.objects = state.objects.filter(o => o.done !== "caught" && o.done !== "missed");
+  if(missed){
+    // lose a catcher; the falling group is cleared; replay this wave (or end)
+    state.catchers--; beep(skin.sfx.miss, 160);
+    state.objects = [];
+    if(state.catchers <= 0){ state.mode = "over"; state.won = false; }
+    else { startWave(state.wave); }   // retry same wave
+    return;
+  }
+  // wave clear: all dropped and none left on screen
+  if(state.toDrop === 0 && state.objects.length === 0){
+    if(state.wave + 1 < CFG.waves){ startWave(state.wave + 1); }
+    else { state.mode = "over"; state.won = true; }
+  }
+}
+
+function roundRect(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+
+function draw(){
+  // bg
+  const g = ctx.createLinearGradient(0,0,0,CFG.H);
+  g.addColorStop(0, skin.bg[0]); g.addColorStop(1, skin.bg[1]);
+  ctx.fillStyle = g; ctx.fillRect(0,0,CFG.W,CFG.H);
+  // dropper
+  ctx.font = "28px system-ui"; ctx.textAlign = "center"; ctx.textBaseline="middle";
+  if(state.mode==="play" || state.mode==="start"){
+    if(skin.dropper.emoji){ ctx.fillText(skin.dropper.emoji, state.dropperX, 34); }
+    else { ctx.fillStyle = skin.dropper.fill; roundRect(state.dropperX-22,20,44,26,8); ctx.fill();
+           ctx.fillStyle="#000"; ctx.fillText(skin.dropper.label, state.dropperX, 33); }
+  }
+  // objects
+  for(const o of state.objects){
+    if(skin.object.emoji){ ctx.font="26px system-ui"; ctx.fillText(skin.object.emoji, o.x, o.y); }
+    else { ctx.shadowColor = skin.object.glow; ctx.shadowBlur = 12;
+           ctx.fillStyle = skin.object.fill; ctx.beginPath(); ctx.arc(o.x,o.y,11,0,7); ctx.fill();
+           ctx.shadowBlur = 0; }
+  }
+  // catcher stack
+  const cx = state.dialX, cy = CFG.H - 34;
+  for(let i=0;i<state.catchers;i++){
+    if(skin.catcher.emoji){ ctx.font="26px system-ui"; ctx.fillText(skin.catcher.emoji, cx, cy - i*20); }
+    else { ctx.fillStyle = skin.catcher.fill; roundRect(cx-40+ i*0, cy - i*10 - 8, 80, 12, 6); ctx.fill(); }
+  }
+  // HUD
+  ctx.fillStyle = skin.hud.color; ctx.font = "16px system-ui"; ctx.textAlign="left";
+  ctx.fillText("SCORE " + state.score, 14, 20);
+  ctx.textAlign="center"; ctx.fillText("WAVE " + (state.wave+1) + " / " + CFG.waves, CFG.W/2, 20);
+  ctx.textAlign="right"; ctx.fillText(skin.words.catcher.toUpperCase()+"S " + state.catchers, CFG.W-14, 20);
+  // INTERNAL watermark — the original-feel reference build never ships
+  if(skin.internal){
+    ctx.save();
+    ctx.globalAlpha = 0.9; ctx.textAlign="center";
+    ctx.fillStyle="#ff5555"; ctx.font="bold 11px system-ui";
+    ctx.fillText("⛔ INTERNAL — DEV / FEEL-REFERENCE ONLY — NOT FOR RELEASE", CFG.W/2, CFG.H-8);
+    ctx.restore();
+  }
+  // overlays
+  if(state.mode==="start"){
+    ctx.textAlign="center"; ctx.fillStyle=skin.hud.accent; ctx.font="bold 30px system-ui";
+    ctx.fillText("DREAMDROP", CFG.W/2, CFG.H/2 - 30);
+    ctx.fillStyle=skin.hud.color; ctx.font="16px system-ui";
+    ctx.fillText("Move the "+skin.words.catcher+" with your mouse / dial", CFG.W/2, CFG.H/2 + 6);
+    ctx.fillText("Catch every "+skin.words.object+" — miss one and you lose a "+skin.words.catcher, CFG.W/2, CFG.H/2 + 30);
+    ctx.fillStyle=skin.hud.accent; ctx.fillText("▶ CLICK TO START", CFG.W/2, CFG.H/2 + 64);
+  }
+  if(state.mode==="over"){
+    ctx.textAlign="center"; ctx.fillStyle=skin.hud.accent; ctx.font="bold 28px system-ui";
+    ctx.fillText(state.won ? "YOU CLEARED ALL WAVES!" : "GAME OVER", CFG.W/2, CFG.H/2 - 20);
+    ctx.fillStyle=skin.hud.color; ctx.font="18px system-ui";
+    ctx.fillText("Score " + state.score, CFG.W/2, CFG.H/2 + 10);
+    ctx.fillStyle=skin.hud.accent; ctx.font="16px system-ui";
+    ctx.fillText("▶ CLICK TO PLAY AGAIN", CFG.W/2, CFG.H/2 + 44);
+  }
+}
+
+function loop(now){
+  const dt = Math.min(0.05, (now - state.last)/1000); state.last = now;
+  update(dt); draw(); requestAnimationFrame(loop);
+}
+
+// skin switching + spinner toggle (wired from index.html)
+window.setSkin = key => { skin = window.SKINS[key]; try{localStorage.setItem("da_skin", key)}catch(e){} };
+window.toggleSpinner = () => {
+  lockedDial = !lockedDial;
+  if(lockedDial) canvas.requestPointerLock(); else document.exitPointerLock();
+  return lockedDial;
+};
+window.currentSkinName = () => skin.name;
+
+newGame();
+requestAnimationFrame(loop);
+
+/* ---- UI wiring ---- */
+let lastSkin = (function(){ try{return localStorage.getItem('da_skin')}catch(e){return null} })() || 'neon';
+if(lastSkin === 'original') lastSkin = 'neon';
+function pick(k, btn){
+  lastSkin = k; setSkin(k);
+  document.querySelectorAll('#skinrow button').forEach(b=>b.classList.remove('on'));
+  if(btn) btn.classList.add('on');
+  pickModeButtons('skinned');
+}
+function pickMode(m, btn){
+  if(m==='original'){ setSkin('original'); document.getElementById('mode-tag').textContent =
+    'faithful feel-reference — internal calibration only, never ships'; }
+  else { setSkin(lastSkin); document.getElementById('mode-tag').textContent =
+    'our skinned versions — this is what ships'; }
+  pickModeButtons(m);
+}
+function pickModeButtons(m){
+  document.getElementById('mode-orig').classList.toggle('on', m==='original');
+  document.getElementById('mode-skin').classList.toggle('on', m==='skinned');
+  document.getElementById('skinrow').style.opacity = (m==='original')?.4:1;
+}
+function spin(btn){ const on = toggleSpinner(); btn.classList.toggle('on', on); }
+(function(){ const b=document.getElementById('sk-'+lastSkin); if(b) b.classList.add('on'); pickMode('skinned'); })();
+</script>
