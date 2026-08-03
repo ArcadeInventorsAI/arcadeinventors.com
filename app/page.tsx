@@ -185,6 +185,7 @@ export default function Home() {
               <p className="mt-1 text-xs text-fog">
                 The invention studio of Rick Barretto · Inventing since 1999.
               </p>
+              <p className="mt-2 text-sm font-600"><a href="tel:+16505822181" className="text-chalk hover:text-cyan">📞 650-582-2181</a></p>
             </div>
             <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-fog">
               <a href="https://www.rickbarretto.com" target="_blank" rel="noopener noreferrer" className="hover:text-cyan">Founder</a>
