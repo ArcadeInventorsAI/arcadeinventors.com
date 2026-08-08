@@ -72,7 +72,7 @@ const orgLd = {
   description:
     "The invention studio of Rick Barretto. Creator of the world's first custom, open-architecture personal arcades (1999) and the IP home behind a family of technology ventures.",
   address: { "@type": "PostalAddress", addressLocality: "Indianapolis", addressRegion: "IN", addressCountry: "US" },
-  contactPoint: { "@type": "ContactPoint", email: "info@arcadeinventors.com", contactType: "sales" },
+  contactPoint: { "@type": "ContactPoint", telephone: "+1-650-582-2181", email: "info@arcadeinventors.com", contactType: "sales" },
   knowsAbout: [
     "Custom arcade design",
     "Open-architecture hardware",

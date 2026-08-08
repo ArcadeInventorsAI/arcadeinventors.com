@@ -45,6 +45,9 @@ export default function Nav() {
           >
             Founder ↗
           </a>
+          <a href="tel:+16505822181" className="text-sm font-600 text-cyan transition-colors hover:text-chalk">
+            📞 650-582-2181
+          </a>
           <Link
             href="/contact"
             className="rounded-md border border-cyan/60 px-4 py-1.5 text-sm font-600 text-cyan transition-all hover:bg-cyan hover:text-ink hover:shadow-neon"
@@ -76,6 +79,7 @@ export default function Nav() {
               </Link>
             ))}
             <a href="https://www.rickbarretto.com" target="_blank" rel="noopener noreferrer" className="text-fog hover:text-chalk">Founder ↗</a>
+            <a href="tel:+16505822181" className="font-600 text-cyan">📞 650-582-2181</a>
           </div>
         </div>
       )}
